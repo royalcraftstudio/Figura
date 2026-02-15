@@ -285,17 +285,6 @@ public abstract class ConfigType<T> {
         }
     }
 
-    public static class IPConfig extends InputConfig<String> {
-        public IPConfig(String name, Category category, String defaultValue) {
-            super(name, category, defaultValue, InputType.IP);
-        }
-
-        @Override
-        public String parseValue(String newVal) {
-            return newVal;
-        }
-    }
-
 
     // -- keybind -- // 
 
@@ -311,6 +300,118 @@ public abstract class ConfigType<T> {
         @Override
         public String parseValue(String newVal) {
             return newVal;
+        }
+    }
+
+    public static class ListConfig extends ParentedConfig<List<String>> implements SerializableConfig {
+
+        public ListConfig(String name, Category category, List<String> defaultValue) {
+            super(name, category, defaultValue);
+        }
+
+        public ListConfig(String name, Category category, List<String> defaultValue, boolean hidden) {
+            super(name, category, defaultValue, hidden);
+        }
+
+        @Override
+        public List<String> parseValue(String newVal) {
+            // Parse comma-separated string
+            List<String> list = new ArrayList<>();
+            if (newVal != null && !newVal.trim().isEmpty()) {
+                for (String item : newVal.split(",")) {
+                    String trimmed = item.trim();
+                    if (!trimmed.isEmpty()) {
+                        list.add(trimmed);
+                    }
+                }
+            }
+            return list;
+        }
+
+        @Override
+        public JsonElement serialize() {
+            JsonArray array = new JsonArray();
+            if (value != null) {
+                for (String item : value) {
+                    array.add(new JsonPrimitive(item));
+                }
+            }
+            return array;
+        }
+
+        @Override
+        public void deserialize(JsonElement element) {
+            List<String> list = new ArrayList<>();
+            if (element != null && element.isJsonArray()) {
+                JsonArray array = element.getAsJsonArray();
+                for (JsonElement item : array) {
+                    if (item != null && item.isJsonPrimitive() && item.getAsJsonPrimitive().isString()) {
+                        list.add(item.getAsString());
+                    }
+                }
+            }
+            this.value = list;
+            this.tempValue = new ArrayList<>(list);
+        }
+
+        @Override
+        public void setValue(String newVal) {
+            boolean change = !value.equals(tempValue);
+
+            try {
+                value = parseValue(newVal);
+            } catch (Exception e) {
+                FiguraMod.LOGGER.warn("Failed to set list config (" + id + ") value, restoring to default", e);
+                value = new ArrayList<>(defaultValue);
+                change = true;
+            }
+
+            tempValue = new ArrayList<>(value);
+            if (change) {
+                try {
+                    Configs.REGISTRY.put(id, value);
+                    onChange();
+                } catch (Exception e) {
+                    FiguraMod.LOGGER.warn("Failed to run onChange for config \"" + id + "\"", e);
+                }
+            }
+        }
+
+        /**
+         * Set value from a list object (used by GUI)
+         */
+        public void setValueFromList(List<String> list) {
+            if (list != null) {
+                this.value = new ArrayList<>(list);
+                this.tempValue = new ArrayList<>(list);
+                Configs.REGISTRY.put(id, value);
+                onChange();
+            }
+        }
+
+        /**
+         * Get the list value safely
+         */
+        public List<String> asList() {
+            return value != null ? new ArrayList<>(value) : new ArrayList<>();
+        }
+
+        @Override
+        public void setDefault() {
+            value = new ArrayList<>(defaultValue);
+            tempValue = new ArrayList<>(defaultValue);
+            Configs.REGISTRY.put(id, value);
+        }
+
+        @Override
+        public boolean isDefault() {
+            if (value == null && defaultValue == null) {
+                return true;
+            }
+            if (value == null || defaultValue == null) {
+                return false;
+            }
+            return value.equals(defaultValue);
         }
     }
 

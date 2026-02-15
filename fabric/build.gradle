@@ -38,14 +38,15 @@ dependencies {
 
     if(rootProject.run_on_quilt == "false") {
         modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
+        modImplementation "maven.modrinth:in-game-account-switcher:8.0.2-fabric1.20"
 
         // Fabric API
-        //modImplementation "net.fabricmc.fabric-api:fabric-api:$fabric_api"
-        include(modImplementation(fabricApi.module("fabric-api-base", rootProject.fabric_api)))
-        include(modImplementation(fabricApi.module("fabric-command-api-v2", rootProject.fabric_api)))
-        include(modImplementation(fabricApi.module("fabric-key-binding-api-v1", rootProject.fabric_api)))
-        include(modImplementation(fabricApi.module("fabric-resource-loader-v0", rootProject.fabric_api)))
-        include(modImplementation(fabricApi.module("fabric-networking-api-v1", rootProject.fabric_api)))
+        modImplementation "net.fabricmc.fabric-api:fabric-api:$fabric_api"
+        //include(modImplementation(fabricApi.module("fabric-api-base", rootProject.fabric_api)))
+        //include(modImplementation(fabricApi.module("fabric-command-api-v2", rootProject.fabric_api)))
+        //include(modImplementation(fabricApi.module("fabric-key-binding-api-v1", rootProject.fabric_api)))
+        //include(modImplementation(fabricApi.module("fabric-resource-loader-v0", rootProject.fabric_api)))
+        //include(modImplementation(fabricApi.module("fabric-networking-api-v1", rootProject.fabric_api)))
     }
     else {
         modImplementation "org.quiltmc:quilt-loader:${rootProject.quilt_loader_version}"

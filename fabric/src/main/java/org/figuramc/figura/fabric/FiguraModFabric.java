@@ -1,17 +1,18 @@
 package org.figuramc.figura.fabric;
 
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PacketSender;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.font.providers.GlyphProviderType;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.PackType;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.backend2.FSBFabric;
+import org.figuramc.figura.avatar.FiguraPanicManager;
 import org.figuramc.figura.commands.fabric.FiguraCommandsFabric;
 import org.figuramc.figura.config.ConfigManager;
 import org.figuramc.figura.server.packets.Packet;
@@ -20,12 +21,30 @@ import org.figuramc.figura.server.packets.handlers.s2c.S2CPacketHandler;
 import org.figuramc.figura.utils.FriendlyByteBufWrapper;
 import org.figuramc.figura.utils.fabric.FiguraResourceListenerImpl;
 
+/**
+ * FABRIC MODULE - Platform-specific initialization for Fabric
+ */
 public class FiguraModFabric extends FiguraMod implements ClientModInitializer {
+
+    private FiguraPanicManager panicManager;
+
     @Override
     public void onInitializeClient() {
         ConfigManager.init();
         onClientInit();
         FiguraCommandsFabric.init();
+
+        // Initialize panic manager
+        panicManager = new FiguraPanicManager(Minecraft.getInstance());
+        FiguraMod.setPanicManager(panicManager); // Set in common mod class
+
+        // Register client tick event for panic manager
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (panicManager != null) {
+                panicManager.update();
+            }
+        });
+
         // we cast here to the impl that implements synchronous as the manager wants
         // register reload listener
         ResourceManagerHelper managerHelper = ResourceManagerHelper.get(PackType.CLIENT_RESOURCES);

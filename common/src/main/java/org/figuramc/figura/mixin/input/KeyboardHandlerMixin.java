@@ -8,6 +8,7 @@ import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
 import org.figuramc.figura.config.Configs;
+import org.figuramc.figura.gui.screens.PanicManagerScreen;
 import org.figuramc.figura.lua.api.keybind.FiguraKeybind;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -28,6 +29,14 @@ public class KeyboardHandlerMixin {
 
         if (action == 1 && Configs.PANIC_BUTTON.keyBind.matches(key, scancode)) {
             AvatarManager.togglePanic();
+            ci.cancel();
+        }
+
+        // Handle panic screen button
+        if (action == 1 && Configs.PANIC_SCREEN_BUTTON.keyBind.matches(key, scancode)) {
+            if (this.minecraft.screen == null) {
+                this.minecraft.setScreen(new PanicManagerScreen(null));
+            }
             ci.cancel();
         }
 

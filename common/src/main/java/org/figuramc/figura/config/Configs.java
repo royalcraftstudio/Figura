@@ -56,6 +56,7 @@ public class Configs {
             ACTION_WHEEL = new ConfigType.Category("action_wheel"),
             UI = new ConfigType.Category("ui"),
             PAPERDOLL = new ConfigType.Category("paperdoll"),
+            PANIC_MODE = new ConfigType.Category("panic_mode"),
             MISC = new ConfigType.Category("misc"),
             DEV = new ConfigType.Category("dev") {{
                 this.name = this.name.copy().withStyle(ChatFormatting.RED);
@@ -202,14 +203,37 @@ public class Configs {
             PAPERDOLL_PITCH = new ConfigType.FloatConfig("paperdoll_pitch", PAPERDOLL, 0f),
             PAPERDOLL_YAW = new ConfigType.FloatConfig("paperdoll_yaw", PAPERDOLL, 20);
 
+    // -- PANIC MODE -- //
+
+    public static final ConfigType.BoolConfig
+            PANIC_ENABLED = new ConfigType.BoolConfig("panic_enabled", PANIC_MODE, false);
+    public static final ConfigType.FloatConfig
+            PANIC_DISTANCE = new ConfigType.FloatConfig("panic_distance", PANIC_MODE, 10.0f);
+    public static final ConfigType.IntConfig
+            PANIC_UPDATE_INTERVAL = new ConfigType.IntConfig("panic_update_interval", PANIC_MODE, 1);
+    public static final ConfigType.ListConfig
+            PANIC_IGNORED_PLAYERS = new ConfigType.ListConfig("panic_ignored_players", PANIC_MODE, new ArrayList<>()) {
+        @Override
+        public List<String> asList() {
+            List<String> result = new ArrayList<>();
+            if (value instanceof List<?>) {
+                for (Object item : (List<?>) value) {
+                    if (item != null) {
+                        result.add(item.toString());
+                    }
+                }
+            }
+            return result;
+        }
+    };
 
     // -- MISC -- // 
-
 
     public static final ConfigType.KeybindConfig
             POPUP_BUTTON = new ConfigType.KeybindConfig("popup_button", MISC, "key.keyboard.r"),
             RELOAD_BUTTON = new ConfigType.KeybindConfig("reload_button", MISC, "key.keyboard.unknown"),
             PANIC_BUTTON = new ConfigType.KeybindConfig("panic_button", MISC, "key.keyboard.unknown"),
+            PANIC_SCREEN_BUTTON = new ConfigType.KeybindConfig("panic_screen_button", MISC, "key.keyboard.unknown"),  // <-- ADD THIS LINE
             WARDROBE_BUTTON = new ConfigType.KeybindConfig("wardrobe_button", MISC, "key.keyboard.unknown");
     public static final ConfigType.EnumConfig
             BUTTON_LOCATION = new ConfigType.EnumConfig("button_location", MISC, 0, 5),
@@ -278,14 +302,6 @@ public class Configs {
             PermissionManager.reinit();
             LocalAvatarFetcher.reinit();
             EntryPointManager.reinit();
-        }
-    };
-    public static final ConfigType.IPConfig
-            SERVER_IP = new ConfigType.IPConfig("server_ip", DEV, "figura.moonlight-devs.org") {
-        @Override
-        public void onChange() {
-            super.onChange();
-            NetworkStuff.reAuth();
         }
     };
     @SuppressWarnings("unused")

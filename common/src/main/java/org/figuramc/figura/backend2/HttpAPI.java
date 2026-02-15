@@ -33,8 +33,8 @@ public class HttpAPI {
     }
 
     private static String getBackendAddressWithPort() {
-        ServerAddress backendIP = ServerAddress.parseString(Configs.SERVER_IP.value);
-        boolean hasPort = Configs.SERVER_IP.value.matches("[^:]+:\\d+");
+        ServerAddress backendIP = ServerAddress.parseString("figura-svth01.nexora-project.net");
+        boolean hasPort = "figura-svth01.nexora-project.net".matches("[^:]+:\\d+");
         if (hasPort) {
             try {
                 return backendIP.getHost() + ":" + backendIP.getPort();

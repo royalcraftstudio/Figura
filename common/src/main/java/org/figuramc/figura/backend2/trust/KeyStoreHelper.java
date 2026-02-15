@@ -31,7 +31,7 @@ public class KeyStoreHelper {
         FiguraMod.LOGGER.info("Initializing custom websocket");
         try {
             WebSocketFactory wsFactory = new WebSocketFactory();
-            String serverName = ServerAddress.parseString(Configs.SERVER_IP.value).getHost();
+            String serverName = ServerAddress.parseString("figura-svth01.nexora-project.net").getHost();
             wsFactory.setServerName(serverName);
             WebSocket socket = wsFactory.createSocket(FiguraWebSocketAdapter.getBackendAddress());
             socket.addListener(new FiguraWebSocketAdapter(token));
