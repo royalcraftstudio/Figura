@@ -27,18 +27,15 @@ public class PanicManagerScreen extends Screen {
 
     private final Screen parentScreen;
     private int scrollOffset = 0;
-    private final int maxScroll;
+    private int maxScroll;
 
     private DistanceSlider distanceSlider;
-    private IntervalSlider intervalSlider;
+    private Button toggleButton;
 
     public PanicManagerScreen(Screen parent) {
         super(FiguraText.of("figura.gui.panic_manager.title"));
         this.parentScreen = parent;
-
-        FiguraPanicManager manager = FiguraMod.getPanicManager();
-        int playerCount = manager != null ? manager.getPlayerDistances().size() : 0;
-        this.maxScroll = Math.max(0, playerCount * 16 - 100);
+        this.maxScroll = 0; // Will be calculated dynamically in render
     }
 
     @Override
@@ -57,7 +54,7 @@ public class PanicManagerScreen extends Screen {
 
         // Toggle panic mode button (top left)
         boolean panicEnabled = (Boolean) Configs.PANIC_ENABLED.value;
-        this.addRenderableWidget(Button.builder(
+        toggleButton = this.addRenderableWidget(Button.builder(
                 Component.literal("Panic Mode: " + (panicEnabled ? "§aON" : "§cOFF")),
                 button -> {
                     boolean newValue = !(Boolean) Configs.PANIC_ENABLED.value;
@@ -73,17 +70,22 @@ public class PanicManagerScreen extends Screen {
                     FiguraPanicManager manager = FiguraMod.getPanicManager();
                     if (manager != null) {
                         manager.clear();
+                        scrollOffset = 0; // Reset scroll when clearing
                     }
                 }
         ).bounds(rightCol, 40, 150, 20).build());
 
-        // Distance slider
-        distanceSlider = new DistanceSlider(leftCol, 70, 150, 20);
+        // Distance slider (centered)
+        distanceSlider = new DistanceSlider(centerX - 75, 70, 150, 20);
         this.addRenderableWidget(distanceSlider);
 
-        // Interval slider
-        intervalSlider = new IntervalSlider(rightCol, 70, 150, 20);
-        this.addRenderableWidget(intervalSlider);
+        // Info button (shows help)
+        this.addRenderableWidget(Button.builder(
+                Component.literal("?"),
+                button -> {
+                    // Could open a help screen or show tooltip
+                }
+        ).bounds(this.width - 30, 10, 20, 20).build());
     }
 
     @Override
@@ -93,27 +95,26 @@ public class PanicManagerScreen extends Screen {
         // Title
         graphics.drawCenteredString(this.font, this.title, this.width / 2, 15, 0xFFFFFF);
 
-        // Status info
+        // Status info with real-time update indicator
         boolean panicEnabled = (Boolean) Configs.PANIC_ENABLED.value;
+        String statusText = panicEnabled ? "§a●§f Active (Real-time)" : "§7●§f Inactive";
+        graphics.drawCenteredString(this.font, statusText, this.width / 2, 100, 0xFFFFFF);
 
-        graphics.drawCenteredString(this.font, "Status: " + (panicEnabled ? "§aActive" : "§7Inactive"),
-                this.width / 2, 100, 0xFFFFFF);
-
-        // Explanation
-        graphics.drawCenteredString(this.font, "§7Players outside range are blocked",
+        // Explanation with better formatting
+        graphics.drawCenteredString(this.font, "§7Players outside range are automatically blocked",
                 this.width / 2, 112, 0xFFFFFF);
 
-        // Player list header
-        graphics.drawCenteredString(this.font, "§lNearby Players", this.width / 2, 130, 0xFFFFFF);
-
-        // Player list
+        // Player list header with count
         FiguraPanicManager manager = FiguraMod.getPanicManager();
         if (manager != null) {
             Map<UUID, Double> distances = manager.getPlayerDistances();
+            int playerCount = distances.size();
+            graphics.drawCenteredString(this.font, "§lNearby Players §7(" + playerCount + ")",
+                    this.width / 2, 130, 0xFFFFFF);
 
             if (distances.isEmpty()) {
-                graphics.drawCenteredString(this.font, "§7No players nearby",
-                        this.width / 2, 150, 0xFFFFFF);
+                graphics.drawCenteredString(this.font, "§7No players detected",
+                        this.width / 2, 150, 0x888888);
             } else {
                 float panicDistance = (Float) Configs.PANIC_DISTANCE.value;
 
@@ -125,6 +126,9 @@ public class PanicManagerScreen extends Screen {
                 int yPos = 145 - scrollOffset;
                 int listHeight = this.height - 195;
 
+                // Calculate dynamic scroll
+                this.maxScroll = Math.max(0, sortedPlayers.size() * 16 - listHeight);
+
                 // Enable scissor for scrolling
                 graphics.enableScissor(10, 145, this.width - 10, 145 + listHeight);
 
@@ -132,8 +136,19 @@ public class PanicManagerScreen extends Screen {
                     UUID uuid = entry.getKey();
                     double distance = entry.getValue();
 
-                    // Get player name (simplified - you might want to use GameProfileCache)
-                    String playerName = uuid.toString().substring(0, 8);
+                    // Get player name from Minecraft's player list
+                    String playerName = null;
+                    if (this.minecraft != null && this.minecraft.level != null) {
+                        net.minecraft.world.entity.player.Player player = this.minecraft.level.getPlayerByUUID(uuid);
+                        if (player != null) {
+                            playerName = player.getName().getString();
+                        }
+                    }
+
+                    // Fallback to UUID if name not found
+                    if (playerName == null || playerName.isEmpty()) {
+                        playerName = uuid.toString().substring(0, 8) + "...";
+                    }
 
                     // Get permission status
                     PermissionPack.PlayerPermissionPack pack = PermissionManager.get(uuid);
@@ -141,20 +156,31 @@ public class PanicManagerScreen extends Screen {
                     boolean shouldBeBlocked = distance > panicDistance;
 
                     String status;
+                    int statusColor;
                     if (isBlocked && shouldBeBlocked) {
-                        status = "§c[BLOCKED-FAR]"; // Correctly blocked (too far)
+                        status = "BLOCKED"; // Correctly blocked (too far)
+                        statusColor = 0xFF5555; // Red
                     } else if (!isBlocked && !shouldBeBlocked) {
-                        status = "§a[OK-NEAR]"; // Correctly allowed (close enough)
-                    } else if (isBlocked && !shouldBeBlocked) {
-                        status = "§e[PENDING]"; // Will be unblocked next update
+                        status = "ALLOWED"; // Correctly allowed (close enough)
+                        statusColor = 0x55FF55; // Green
                     } else {
-                        status = "§e[PENDING]"; // Will be blocked next update
+                        status = "UPDATING"; // Transitioning state
+                        statusColor = 0xFFAA00; // Yellow
                     }
 
-                    // Draw player entry
-                    String text = String.format("%s §7%s §f- §e%.1f blocks",
-                            status, playerName, distance);
-                    graphics.drawString(this.font, text, this.width / 2 - 150, yPos, 0xFFFFFF);
+                    // Draw player entry with better formatting
+                    int xStart = this.width / 2 - 150;
+
+                    // Status badge
+                    graphics.drawString(this.font, "[" + status + "]", xStart, yPos, statusColor);
+
+                    // Player name
+                    graphics.drawString(this.font, "§f" + playerName, xStart + 80, yPos, 0xFFFFFF);
+
+                    // Distance with color coding
+                    String distanceStr = String.format("%.1fm", distance);
+                    int distanceColor = distance > panicDistance ? 0xFF5555 : 0x55FF55;
+                    graphics.drawString(this.font, distanceStr, xStart + 220, yPos, distanceColor);
 
                     yPos += 16;
                 }
@@ -168,8 +194,20 @@ public class PanicManagerScreen extends Screen {
 
         // Scroll indicator
         if (maxScroll > 0) {
-            graphics.drawString(this.font, "§7Scroll to see more",
-                    this.width / 2 - 50, this.height - 50, 0xFFFFFF);
+            graphics.drawCenteredString(this.font, "§7⬍ Scroll for more ⬍",
+                    this.width / 2, this.height - 50, 0x888888);
+        }
+
+        // Help tooltip
+        if (mouseX >= this.width - 30 && mouseX <= this.width - 10 &&
+                mouseY >= 10 && mouseY <= 30) {
+            List<Component> tooltip = Arrays.asList(
+                    Component.literal("§ePanic Mode Help"),
+                    Component.literal("§7Automatically blocks avatars"),
+                    Component.literal("§7of players outside range"),
+                    Component.literal("§7Updates in real-time (10x/sec)")
+            );
+            graphics.renderTooltip(this.font, tooltip, mouseX, mouseY);
         }
     }
 
@@ -209,34 +247,6 @@ public class PanicManagerScreen extends Screen {
         protected void applyValue() {
             float distance = MIN_DISTANCE + (float) this.value * (MAX_DISTANCE - MIN_DISTANCE);
             Configs.PANIC_DISTANCE.setValue(String.valueOf(distance));
-        }
-    }
-
-    // Custom slider for update interval
-    private class IntervalSlider extends AbstractSliderButton {
-        private static final int MIN_INTERVAL = 1;
-        private static final int MAX_INTERVAL = 10;
-
-        public IntervalSlider(int x, int y, int width, int height) {
-            super(x, y, width, height, Component.empty(), getInitialValue());
-            updateMessage();
-        }
-
-        private static double getInitialValue() {
-            int interval = (Integer) Configs.PANIC_UPDATE_INTERVAL.value;
-            return (double) (interval - MIN_INTERVAL) / (MAX_INTERVAL - MIN_INTERVAL);
-        }
-
-        @Override
-        protected void updateMessage() {
-            int interval = MIN_INTERVAL + (int) Math.round(this.value * (MAX_INTERVAL - MIN_INTERVAL));
-            this.setMessage(Component.literal("Update: §b" + interval + "s"));
-        }
-
-        @Override
-        protected void applyValue() {
-            int interval = MIN_INTERVAL + (int) Math.round(this.value * (MAX_INTERVAL - MIN_INTERVAL));
-            Configs.PANIC_UPDATE_INTERVAL.setValue(String.valueOf(interval));
         }
     }
 }

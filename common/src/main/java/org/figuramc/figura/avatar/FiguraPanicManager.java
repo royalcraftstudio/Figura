@@ -38,13 +38,17 @@ public class FiguraPanicManager {
     private final Map<UUID, Double> playerDistances = new WeakHashMap<>();
 
     // Track which players are currently in range (to detect transitions)
-    private final Set<UUID> playersInRange = new HashSet<>();
+    // Use WeakHashMap to prevent memory leaks
+    private final Set<UUID> playersInRange = Collections.newSetFromMap(new WeakHashMap<>());
 
-    // Track last update time
-    private long lastUpdate = 0;
+    // Track last update time per player for throttling (prevents spam)
+    private final Map<UUID, Long> lastPlayerUpdate = new WeakHashMap<>();
 
     // Track reload cooldowns per player (WeakHashMap prevents memory leaks from disconnected players)
     private final Map<UUID, Long> reloadCooldown = new WeakHashMap<>();
+
+    // Per-player update interval in milliseconds
+    private static final long PLAYER_UPDATE_INTERVAL_MS = 100; // Update every 100ms (10 times per second)
 
     public FiguraPanicManager(Minecraft client) {
         this.client = client;
@@ -52,6 +56,7 @@ public class FiguraPanicManager {
 
     /**
      * Main update method - should be called every client tick from platform-specific code
+     * Now updates in real-time with per-player throttling to prevent memory leaks
      */
     public void update() {
         // Check if panic mode is enabled
@@ -68,15 +73,8 @@ public class FiguraPanicManager {
 
         long currentTime = System.currentTimeMillis();
 
-        // Check if enough time has passed since last update
-        if (currentTime - lastUpdate < (Integer) Configs.PANIC_UPDATE_INTERVAL.value * 1000L) {
-            return;
-        }
-
-        lastUpdate = currentTime;
-
-        // Clear old distance data
-        playerDistances.clear();
+        // Track which players are still present in this update
+        Set<UUID> currentPlayers = new HashSet<>();
 
         // Iterate through all players in the world
         List<AbstractClientPlayer> players = world.players();
@@ -94,6 +92,15 @@ public class FiguraPanicManager {
                 }
 
                 UUID uuid = player.getUUID();
+                currentPlayers.add(uuid);
+
+                // Per-player throttling - only update this player if enough time has passed
+                Long lastUpdate = lastPlayerUpdate.get(uuid);
+                if (lastUpdate != null && currentTime - lastUpdate < PLAYER_UPDATE_INTERVAL_MS) {
+                    continue;
+                }
+
+                lastPlayerUpdate.put(uuid, currentTime);
 
                 // Calculate distance
                 double distance = localPlayer.distanceTo(player);
@@ -149,6 +156,13 @@ public class FiguraPanicManager {
                 // Silently handle errors for individual players
             }
         }
+
+        // Clean up disconnected players (prevents memory leaks)
+        // Remove players that are no longer in the world from tracking maps
+        playerDistances.keySet().retainAll(currentPlayers);
+        lastPlayerUpdate.keySet().retainAll(currentPlayers);
+        // Note: playersInRange, originalPerms, and reloadCooldown use WeakHashMap
+        // so they'll automatically clean up disconnected players
     }
 
     /**
@@ -198,6 +212,7 @@ public class FiguraPanicManager {
         originalPerms.clear();
         playerDistances.clear();
         playersInRange.clear();
+        lastPlayerUpdate.clear();
         reloadCooldown.clear();
     }
 }
