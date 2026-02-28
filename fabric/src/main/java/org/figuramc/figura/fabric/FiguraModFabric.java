@@ -12,7 +12,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.PackType;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.backend2.FSBFabric;
-import org.figuramc.figura.avatar.FiguraPanicManager;
+import org.figuramc.figura.avatar.SmartPanicManager;
 import org.figuramc.figura.commands.fabric.FiguraCommandsFabric;
 import org.figuramc.figura.config.ConfigManager;
 import org.figuramc.figura.server.packets.Packet;
@@ -26,7 +26,7 @@ import org.figuramc.figura.utils.fabric.FiguraResourceListenerImpl;
  */
 public class FiguraModFabric extends FiguraMod implements ClientModInitializer {
 
-    private FiguraPanicManager panicManager;
+    private SmartPanicManager panicManager;
 
     @Override
     public void onInitializeClient() {
@@ -34,19 +34,15 @@ public class FiguraModFabric extends FiguraMod implements ClientModInitializer {
         onClientInit();
         FiguraCommandsFabric.init();
 
-        // Initialize panic manager
-        panicManager = new FiguraPanicManager(Minecraft.getInstance());
-        FiguraMod.setPanicManager(panicManager); // Set in common mod class
+        panicManager = new SmartPanicManager(Minecraft.getInstance());
+        FiguraMod.setPanicManager(panicManager);
 
-        // Register client tick event for panic manager
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (panicManager != null) {
                 panicManager.update();
             }
         });
 
-        // we cast here to the impl that implements synchronous as the manager wants
-        // register reload listener
         ResourceManagerHelper managerHelper = ResourceManagerHelper.get(PackType.CLIENT_RESOURCES);
         getResourceListeners().forEach(figuraResourceListener -> managerHelper.registerReloadListener((FiguraResourceListenerImpl)figuraResourceListener));
 

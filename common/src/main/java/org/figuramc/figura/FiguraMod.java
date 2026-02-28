@@ -7,7 +7,7 @@ import net.minecraft.server.players.GameProfileCache;
 import net.minecraft.world.entity.Entity;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
-import org.figuramc.figura.avatar.FiguraPanicManager;
+import org.figuramc.figura.avatar.SmartPanicManager;
 import org.figuramc.figura.avatar.local.CacheAvatarLoader;
 import org.figuramc.figura.avatar.local.LocalAvatarFetcher;
 import org.figuramc.figura.avatar.local.LocalAvatarLoader;
@@ -50,7 +50,7 @@ public class FiguraMod {
     public static Component splashText;
     public static boolean parseMessages = true;
     public static boolean processingKeybind;
-    private static FiguraPanicManager panicManager;
+    private static SmartPanicManager panicManager;
 
     /* For some reason, the mod menu entrypoint (or something) is able to call this before the Config
     class can initialize, meaning Configs.DEBUG_MODE can be null when this is called.... Weird */
@@ -134,10 +134,10 @@ public class FiguraMod {
     public static boolean isOffline(UUID other) {
         return !Minecraft.getInstance().getConnection().getOnlinePlayerIds().contains(other);
     }
-    public static void setPanicManager(FiguraPanicManager manager) {
+    public static void setPanicManager(SmartPanicManager manager) {
         panicManager = manager;
     }
-    public static FiguraPanicManager getPanicManager() {
+    public static SmartPanicManager getPanicManager() {
         return panicManager;
     }
 

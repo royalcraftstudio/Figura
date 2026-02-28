@@ -538,7 +538,7 @@
     "figura.config.reload_button.tooltip": "Reloads current equipped avatar on press",
     "figura.config.panic_button": "Panic Button",
     "figura.config.panic_button.tooltip": "Stop the rendering of all avatars",
-    "figura.config.panic_screen_button": "Smart Panic Screen Button",
+    "figura.config.panic_screen_button": "Smart Panic Button",
     "figura.config.panic_screen_button.tooltip": "Opens the Smart Panic Screen to configure smart panic",
     "figura.config.wardrobe_button": "Wardrobe Button",
     "figura.config.wardrobe_button.tooltip": "Opens the Figura Wardrobe screen",

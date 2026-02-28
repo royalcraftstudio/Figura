@@ -207,10 +207,21 @@ public class Configs {
 
     public static final ConfigType.BoolConfig
             PANIC_ENABLED = new ConfigType.BoolConfig("panic_enabled", PANIC_MODE, false);
-    public static final ConfigType.FloatConfig
-            PANIC_DISTANCE = new ConfigType.FloatConfig("panic_distance", PANIC_MODE, 10.0f);
-    public static final ConfigType.IntConfig
-            PANIC_UPDATE_INTERVAL = new ConfigType.IntConfig("panic_update_interval", PANIC_MODE, 1);
+    public static final ConfigType.PositiveFloatConfig
+            PANIC_DISTANCE = new ConfigType.PositiveFloatConfig("panic_distance", PANIC_MODE, 10.0f) {
+        @Override
+        public void setValue(String value) {
+            try {
+                float v = Float.parseFloat(value);
+                if (v < 5.0f) v = 5.0f;
+                super.setValue(String.valueOf(v));
+            } catch (NumberFormatException e) {
+                super.setValue(value);
+            }
+        }
+    };
+    public static final ConfigType.PositiveIntConfig
+            PANIC_UPDATE_INTERVAL = new ConfigType.PositiveIntConfig("panic_update_interval", PANIC_MODE, 1);
     public static final ConfigType.ListConfig
             PANIC_IGNORED_PLAYERS = new ConfigType.ListConfig("panic_ignored_players", PANIC_MODE, new ArrayList<>()) {
         @Override
@@ -227,13 +238,13 @@ public class Configs {
         }
     };
 
-    // -- MISC -- // 
+    // -- MISC -- //
 
     public static final ConfigType.KeybindConfig
             POPUP_BUTTON = new ConfigType.KeybindConfig("popup_button", MISC, "key.keyboard.r"),
             RELOAD_BUTTON = new ConfigType.KeybindConfig("reload_button", MISC, "key.keyboard.unknown"),
             PANIC_BUTTON = new ConfigType.KeybindConfig("panic_button", MISC, "key.keyboard.unknown"),
-            PANIC_SCREEN_BUTTON = new ConfigType.KeybindConfig("panic_screen_button", MISC, "key.keyboard.unknown"),  // <-- ADD THIS LINE
+            PANIC_SCREEN_BUTTON = new ConfigType.KeybindConfig("panic_screen_button", MISC, "key.keyboard.unknown"),
             WARDROBE_BUTTON = new ConfigType.KeybindConfig("wardrobe_button", MISC, "key.keyboard.unknown");
     public static final ConfigType.EnumConfig
             BUTTON_LOCATION = new ConfigType.EnumConfig("button_location", MISC, 0, 5),
@@ -278,11 +289,11 @@ public class Configs {
             LOG_PINGS = new ConfigType.EnumConfig("log_pings", DEV, 0, 3);
     public static final ConfigType.BoolConfig
             SYNC_PINGS = new ConfigType.BoolConfig("sync_pings", DEV, false) {{
-                String tooltip = "config.sync_pings.tooltip.";
-                this.tooltip = FiguraText.of(tooltip + "1")
-                        .append("\n")
-                        .append(FiguraText.of(tooltip + "2").withStyle(ChatFormatting.RED));
-            }},
+        String tooltip = "config.sync_pings.tooltip.";
+        this.tooltip = FiguraText.of(tooltip + "1")
+                .append("\n")
+                .append(FiguraText.of(tooltip + "2").withStyle(ChatFormatting.RED));
+    }},
             CHAT_MESSAGES = new ConfigType.BoolConfig("chat_messages", DEV, false) {{
                 this.name = this.name.copy().withStyle(ChatFormatting.RED);
                 String tooltip = "config.chat_messages.tooltip.";
